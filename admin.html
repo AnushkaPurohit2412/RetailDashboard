@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Retail Audit — Admin Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f5f7fa;color:#202124;display:flex;min-height:100vh}
+a{color:#1a73e8;text-decoration:none}
+
+/* SIDEBAR */
+#sidebar{width:220px;background:#fff;border-right:1px solid #e0e0e0;position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:100}
+#sidebar .brand{padding:20px 18px 16px;border-bottom:1px solid #e0e0e0}
+#sidebar .brand h1{font-size:15px;font-weight:600;color:#202124}
+#sidebar .brand p{font-size:11px;color:#5f6368;margin-top:2px}
+#sidebar nav{flex:1;overflow-y:auto;padding:8px 0}
+#sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 18px;color:#5f6368;font-size:13px;border-left:3px solid transparent;transition:all .15s}
+#sidebar nav a:hover{background:#f1f3f4;color:#202124}
+#sidebar nav a.active{background:#e8f0fe;color:#1a73e8;border-left-color:#1a73e8;font-weight:500}
+#sidebar nav a .ico{width:16px;text-align:center;font-style:normal}
+#sidebar .save-wrap{padding:14px}
+#save-all{width:100%;padding:10px;background:#1a73e8;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+#save-all:hover{background:#1557b0}
+#save-status{text-align:center;font-size:11px;color:#388e3c;margin-top:6px;min-height:16px}
+
+/* MAIN */
+#main{margin-left:220px;flex:1;padding:28px 32px;max-width:960px}
+.section-block{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:24px;margin-bottom:24px}
+.section-block h2{font-size:16px;font-weight:600;margin-bottom:4px;color:#202124}
+.section-block .sub{font-size:12px;color:#5f6368;margin-bottom:18px}
+
+/* FORM ELEMENTS */
+label{display:block;font-size:12px;font-weight:500;color:#5f6368;margin-bottom:4px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:8px 10px;border:1px solid #dadce0;border-radius:6px;font-size:13px;color:#202124;background:#fff;outline:none;transition:border .15s}
+input[type=text]:focus,input[type=number]:focus,select:focus{border-color:#1a73e8;box-shadow:0 0 0 2px #e8f0fe}
+input[type=number]{width:80px}
+button{cursor:pointer;border:none;border-radius:6px;font-size:13px;font-weight:500;padding:8px 16px;transition:background .15s}
+.btn-primary{background:#1a73e8;color:#fff}
+.btn-primary:hover{background:#1557b0}
+.btn-outline{background:#fff;color:#1a73e8;border:1px solid #1a73e8}
+.btn-outline:hover{background:#e8f0fe}
+.btn-danger{background:#fff;color:#d32f2f;border:1px solid #d32f2f}
+.btn-danger:hover{background:#fce8e6}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* SHEET CONNECTION */
+.url-row{display:flex;gap:8px;align-items:flex-end}
+.url-row .field{flex:1}
+#preview-wrap{margin-top:16px;overflow-x:auto}
+#preview-table{width:100%;border-collapse:collapse;font-size:12px}
+#preview-table th{background:#f1f3f4;padding:6px 10px;text-align:left;border:1px solid #e0e0e0;font-weight:500}
+#preview-table td{padding:6px 10px;border:1px solid #e0e0e0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#conn-status{margin-top:10px;font-size:12px;padding:8px 12px;border-radius:6px;display:none}
+#conn-status.ok{background:#e6f4ea;color:#137333;display:block}
+#conn-status.err{background:#fce8e6;color:#d32f2f;display:block}
+
+/* COLUMN MAPPER */
+#mapper-table{width:100%;border-collapse:collapse}
+#mapper-table th{background:#f1f3f4;padding:8px 12px;text-align:left;font-size:12px;font-weight:500;border-bottom:2px solid #e0e0e0}
+#mapper-table td{padding:6px 12px;border-bottom:1px solid #f1f3f4;vertical-align:middle}
+#mapper-table td:first-child{font-family:monospace;font-size:12px;color:#5f6368;width:220px}
+#mapper-table tr:hover td{background:#f8f9fa}
+.section-tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;background:#e8f0fe;color:#1a73e8;margin-left:6px;font-weight:500}
+
+/* SECTION EDITOR */
+.section-card{border:1px solid #e0e0e0;border-radius:8px;margin-bottom:12px;overflow:hidden}
+.section-card-head{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f8f9fa;border-bottom:1px solid #e0e0e0}
+.section-card-head .sec-label{flex:1;font-weight:500;font-size:13px}
+.section-card-head .weight-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:#5f6368}
+.section-card-body{padding:12px 16px}
+.q-list{display:flex;flex-wrap:wrap;gap:6px;min-height:36px;border:1px dashed #dadce0;border-radius:6px;padding:8px;background:#fafafa}
+.q-chip{display:inline-flex;align-items:center;gap:4px;background:#e8f0fe;color:#1a73e8;padding:3px 8px;border-radius:12px;font-size:11px;cursor:grab;user-select:none;border:1px solid #c5d9f7}
+.q-chip:active{cursor:grabbing;opacity:.7}
+.q-chip .rm{background:none;border:none;color:#1a73e8;cursor:pointer;padding:0 2px;font-size:13px;line-height:1}
+#weight-total-bar{display:flex;align-items:center;gap:10px;padding:10px 0 2px;font-size:12px}
+#weight-total-val{font-weight:600}
+#weight-total-val.bad{color:#d32f2f}
+#weight-total-val.ok{color:#388e3c}
+#weight-warning{color:#d32f2f;font-size:12px;display:none}
+
+/* UNASSIGNED POOL */
+#pool-wrap{margin-top:16px}
+#pool-wrap label{margin-bottom:6px}
+#q-pool{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;border:1px dashed #dadce0;border-radius:6px;padding:8px;background:#fff8e1}
+
+/* SCORING TABLE */
+#scoring-table{width:100%;border-collapse:collapse;margin-bottom:10px}
+#scoring-table th{background:#f1f3f4;padding:8px 12px;text-align:left;font-size:12px;font-weight:500;border-bottom:2px solid #e0e0e0}
+#scoring-table td{padding:6px 12px;border-bottom:1px solid #f1f3f4}
+#scoring-table td input[type=text]{width:180px}
+#scoring-table td input[type=number]{width:70px}
+#scoring-table td.na-cell input{width:60px}
+
+/* SEVERITY */
+.slider-row{display:grid;grid-template-columns:140px 1fr 50px;align-items:center;gap:12px;margin-bottom:14px}
+.slider-row label{font-size:13px;font-weight:500;margin:0}
+input[type=range]{width:100%;accent-color:#1a73e8;height:4px}
+.slider-row .val{text-align:right;font-size:13px;font-weight:600}
+#sev-bar{height:28px;border-radius:6px;overflow:hidden;display:flex;margin-top:6px;border:1px solid #e0e0e0}
+.sev-zone{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#fff;transition:width .2s}
+#zone-critical{background:#d32f2f}
+#zone-risk{background:#f57c00}
+#zone-good{background:#00796b}
+#zone-excellent{background:#388e3c}
+
+/* EXPORT ROW */
+.action-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:#323232;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+#toast.show{opacity:1}
+
+/* DRAG OVER */
+.q-list.drag-over{border-color:#1a73e8;background:#e8f0fe}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="brand">
+    <h1>🏪 Retail Audit</h1>
+    <p>Admin Configuration</p>
+  </div>
+  <nav>
+    <a href="#s1" class="active"><i class="ico">🔗</i> Sheet Connection</a>
+    <a href="#s2"><i class="ico">📋</i> Column Mapper</a>
+    <a href="#s3"><i class="ico">🗂️</i> Section Editor</a>
+    <a href="#s4"><i class="ico">🔢</i> Scoring Rules</a>
+    <a href="#s5"><i class="ico">🚦</i> Severity Levels</a>
+    <a href="#s6"><i class="ico">🚀</i> Save & Deploy</a>
+  </nav>
+  <div class="save-wrap">
+    <button id="save-all" onclick="saveAll()">💾 Save Configuration</button>
+    <div id="save-status"></div>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- S1: Sheet Connection -->
+  <div class="section-block" id="s1">
+    <h2>🔗 Sheet Connection</h2>
+    <p class="sub">Paste the Google Sheets "Publish to web → CSV" URL. The dashboard will fetch data from here every 5 minutes.</p>
+    <div class="url-row">
+      <div class="field">
+        <label>Google Sheets CSV URL</label>
+        <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" oninput="debounceSave()"/>
+      </div>
+      <button class="btn-primary" onclick="testConnection()">Test Connection</button>
+    </div>
+    <div id="conn-status"></div>
+    <div id="preview-wrap"></div>
+  </div>
+
+  <!-- S2: Column Mapper -->
+  <div class="section-block" id="s2">
+    <h2>📋 Column Mapper</h2>
+    <p class="sub">Map each logical dashboard field to the exact column header in your Google Sheet. Connect your sheet first to auto-populate the dropdowns.</p>
+    <table id="mapper-table">
+      <thead><tr><th>Logical field</th><th>Sheet column header</th></tr></thead>
+      <tbody id="mapper-body"></tbody>
+    </table>
+  </div>
+
+  <!-- S3: Section Editor -->
+  <div class="section-block" id="s3">
+    <h2>🗂️ Section Editor</h2>
+    <p class="sub">Drag question chips between sections. Adjust weights — they must sum to 1.0.</p>
+    <div id="weight-total-bar">
+      Total weight: <span id="weight-total-val" class="bad">0.00</span>
+      <span id="weight-warning">⚠️ Weights must sum to 1.0</span>
+    </div>
+    <div id="sections-wrap"></div>
+    <div id="pool-wrap">
+      <label>Unassigned questions (drag to a section)</label>
+      <div class="q-list" id="q-pool" data-section="__pool__"></div>
+    </div>
+  </div>
+
+  <!-- S4: Scoring Rules -->
+  <div class="section-block" id="s4">
+    <h2>🔢 Scoring Rules</h2>
+    <p class="sub">Define what numeric score each answer string maps to. Leave score blank or use "null" to exclude that answer from scoring (N/A).</p>
+    <table id="scoring-table">
+      <thead><tr><th>Answer string</th><th>Score (0–100)</th><th>Exclude (N/A)</th><th></th></tr></thead>
+      <tbody id="scoring-body"></tbody>
+    </table>
+    <button class="btn-outline btn-sm" onclick="addScoringRow()">+ Add answer</button>
+  </div>
+
+  <!-- S5: Severity Thresholds -->
+  <div class="section-block" id="s5">
+    <h2>🚦 Severity Thresholds</h2>
+    <p class="sub">Set the score boundaries for each severity level. The colour bar updates live.</p>
+    <div class="slider-row">
+      <label style="color:#d32f2f">🔴 Critical below</label>
+      <input type="range" id="sl-critical" min="0" max="100" value="40" oninput="updateSevBar()"/>
+      <span class="val" id="lbl-critical" style="color:#d32f2f">40</span>
+    </div>
+    <div class="slider-row">
+      <label style="color:#f57c00">🟠 At Risk below</label>
+      <input type="range" id="sl-risk" min="0" max="100" value="65" oninput="updateSevBar()"/>
+      <span class="val" id="lbl-risk" style="color:#f57c00">65</span>
+    </div>
+    <div class="slider-row">
+      <label style="color:#00796b">🟢 Good below</label>
+      <input type="range" id="sl-good" min="0" max="100" value="85" oninput="updateSevBar()"/>
+      <span class="val" id="lbl-good" style="color:#00796b">85</span>
+    </div>
+    <div class="slider-row">
+      <label style="color:#388e3c">✅ Excellent</label>
+      <input type="range" id="sl-excellent" min="0" max="100" value="85" disabled/>
+      <span class="val" id="lbl-excellent" style="color:#388e3c">85+</span>
+    </div>
+    <div id="sev-bar">
+      <div class="sev-zone" id="zone-critical">Critical</div>
+      <div class="sev-zone" id="zone-risk">At Risk</div>
+      <div class="sev-zone" id="zone-good">Good</div>
+      <div class="sev-zone" id="zone-excellent">Excellent</div>
+    </div>
+  </div>
+
+  <!-- S6: Save & Deploy -->
+  <div class="section-block" id="s6">
+    <h2>🚀 Save & Deploy</h2>
+    <p class="sub">Save your configuration to the browser, export as a <code>config.js</code> file to commit to GitHub, or open the live dashboard.</p>
+    <div class="action-row">
+      <button class="btn-primary" onclick="saveAll()">💾 Save to browser</button>
+      <button class="btn-outline" onclick="exportConfigJS()">⬇️ Export config.js</button>
+      <a href="dashboard.html" target="_blank"><button class="btn-outline">📊 Preview dashboard →</button></a>
+    </div>
+    <p style="margin-top:14px;font-size:12px;color:#5f6368">After exporting, replace <code>config.js</code> in your GitHub repo with the downloaded file and commit. The dashboard will use your new settings immediately.</p>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Globals ──────────────────────────────────────────────────
+let detectedHeaders = [];
+let saveTimer = null;
+
+const DEFAULT_CONFIG = {
+  SHEET_URL: "",
+  COLUMN_MAP: {
+    store_name:"Store Name", city:"City", region:"Region",
+    regional_manager:"Regional Manager", audit_date:"Timestamp", auditor_name:"Auditor Name",
+    q1:"",q2:"",q3:"",q4:"",q5:"",q6:"",
+    q7:"",q8:"",q9:"",q10:"",q11:"",q12:"",
+    q13:"",q14:"",q15:"",q16:"",q17:"",q18:"",
+    q19:"",q20:"",q21:"",q22:"",q23:"",q24:"",
+    q25:"",q26:"",q27:"",q28:"",q29:"",q30:""
+  },
+  SECTIONS:[
+    {id:"appearance",label:"Store Appearance",questions:["q1","q2","q3","q4","q5","q6"],weight:0.20},
+    {id:"inventory",label:"Inventory Management",questions:["q7","q8","q9","q10","q11","q12"],weight:0.25},
+    {id:"staff",label:"Staff Compliance",questions:["q13","q14","q15","q16","q17","q18"],weight:0.20},
+    {id:"customer",label:"Customer Experience",questions:["q19","q20","q21","q22","q23","q24"],weight:0.20},
+    {id:"safety",label:"Safety & Security",questions:["q25","q26","q27","q28","q29","q30"],weight:0.15}
+  ],
+  SEVERITY_THRESHOLDS:{critical:40,at_risk:65,good:85,excellent:85},
+  ANSWER_SCORES:{"Yes":100,"No":0,"Partial":50,"Mostly Yes":75,"Mostly No":25,"N/A":null,"":null},
+  REFRESH_INTERVAL_MS:300000,
+  FILTERS:[
+    {key:"store_name",label:"Store"},
+    {key:"city",label:"City"},
+    {key:"region",label:"Region"},
+    {key:"regional_manager",label:"Regional Manager"}
+  ]
+};
+
+function loadConfig(){
+  try{
+    const raw = localStorage.getItem("retail_dash_config");
+    if(raw) return Object.assign({},DEFAULT_CONFIG,JSON.parse(raw));
+  } catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+}
+
+let CFG = loadConfig();
+
+// ── Init ──────────────────────────────────────────────────────
+window.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("sheet-url").value = CFG.SHEET_URL||"";
+  buildMapper();
+  buildSections();
+  buildScoringTable();
+  loadSeveritySliders();
+  updateSevBar();
+  setupNavHighlight();
+  setupDragDrop();
+});
+
+// ── NAV ──────────────────────────────────────────────────────
+function setupNavHighlight(){
+  const links = document.querySelectorAll("#sidebar nav a");
+  const sections = document.querySelectorAll(".section-block");
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        links.forEach(l=>l.classList.remove("active"));
+        const active = document.querySelector(`#sidebar nav a[href="#${e.target.id}"]`);
+        if(active) active.classList.add("active");
+      }
+    });
+  },{threshold:0.4});
+  sections.forEach(s=>obs.observe(s));
+}
+
+// ── DEBOUNCE SAVE ────────────────────────────────────────────
+function debounceSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveAll,300);
+}
+
+// ── SHEET CONNECTION ─────────────────────────────────────────
+async function testConnection(){
+  const url = document.getElementById("sheet-url").value.trim();
+  const st = document.getElementById("conn-status");
+  const pw = document.getElementById("preview-wrap");
+  if(!url){st.className="err";st.textContent="Please enter a URL.";return;}
+  st.className="";st.textContent="⏳ Connecting…";st.style.display="block";
+  pw.innerHTML="";
+  try{
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    const text = await resp.text();
+    const rows = parseCSVPreview(text);
+    if(!rows.length) throw new Error("Empty response");
+    detectedHeaders = rows[0];
+    CFG.SHEET_URL = url;
+    st.className="ok";
+    st.textContent="✅ Connected! "+detectedHeaders.length+" columns detected. Scroll down to map them.";
+    pw.innerHTML = buildPreviewTable(rows.slice(0,4));
+    buildMapper();
+    debounceSave();
+  } catch(e){
+    st.className="err";
+    st.textContent="❌ Failed: "+e.message+". Make sure the sheet is published as CSV and is publicly accessible.";
+  }
+}
+
+function parseCSVPreview(text){
+  const lines = text.trim().split("\n").slice(0,4);
+  return lines.map(line=>{
+    const cols=[];let cur="",inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'&&!inQ){inQ=true;}
+      else if(c==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
+      else if(c==='"'&&inQ){inQ=false;}
+      else if(c===','&&!inQ){cols.push(cur);cur="";}
+      else cur+=c;
+    }
+    cols.push(cur);
+    return cols;
+  });
+}
+
+function buildPreviewTable(rows){
+  if(!rows.length) return "";
+  let h="<table id='preview-table'><thead><tr>";
+  rows[0].forEach(c=>h+=`<th>${esc(c)}</th>`);
+  h+="</tr></thead><tbody>";
+  rows.slice(1).forEach(r=>{
+    h+="<tr>";
+    r.forEach(c=>h+=`<td title="${esc(c)}">${esc(c)}</td>`);
+    h+="</tr>";
+  });
+  return h+"</tbody></table>";
+}
+
+// ── COLUMN MAPPER ────────────────────────────────────────────
+const META_KEYS = ["store_name","city","region","regional_manager","audit_date","auditor_name"];
+const META_LABELS = {
+  store_name:"Store name",city:"City",region:"Region",
+  regional_manager:"Regional manager",audit_date:"Audit date (Timestamp)",auditor_name:"Auditor name"
+};
+
+function buildMapper(){
+  const tbody = document.getElementById("mapper-body");
+  const allKeys = Object.keys(DEFAULT_CONFIG.COLUMN_MAP);
+  tbody.innerHTML = allKeys.map(key=>{
+    const isMeta = META_KEYS.includes(key);
+    const secLabel = isMeta ? "" : getSectionForQ(key);
+    const tag = secLabel ? `<span class="section-tag">${esc(secLabel)}</span>` : "";
+    const label = isMeta ? (META_LABELS[key]||key) : key;
+    const saved = (CFG.COLUMN_MAP&&CFG.COLUMN_MAP[key])||"";
+    const opts = buildHeaderOpts(saved);
+    return `<tr>
+      <td><code>${label}</code>${tag}</td>
+      <td><select id="map-${key}" onchange="onMapChange('${key}',this.value)">${opts}</select></td>
+    </tr>`;
+  }).join("");
+}
+
+function buildHeaderOpts(selected){
+  let o=`<option value="">— select column —</option>`;
+  if(detectedHeaders.length){
+    detectedHeaders.forEach(h=>{
+      o+=`<option value="${esc(h)}"${h===selected?" selected":""}>${esc(h)}</option>`;
+    });
+  } else if(selected){
+    o+=`<option value="${esc(selected)}" selected>${esc(selected)}</option>`;
+  }
+  return o;
+}
+
+function onMapChange(key,val){
+  if(!CFG.COLUMN_MAP) CFG.COLUMN_MAP={};
+  CFG.COLUMN_MAP[key]=val;
+  updateSectionTags();
+  debounceSave();
+}
+
+function getSectionForQ(qkey){
+  if(!CFG.SECTIONS) return "";
+  const sec = CFG.SECTIONS.find(s=>s.questions&&s.questions.includes(qkey));
+  return sec ? sec.label : "";
+}
+
+function updateSectionTags(){
+  const allKeys = Object.keys(DEFAULT_CONFIG.COLUMN_MAP).filter(k=>!META_KEYS.includes(k));
+  allKeys.forEach(key=>{
+    const row = document.querySelector(`#map-${key}`)?.closest("tr");
+    if(!row) return;
+    const td = row.querySelector("td:first-child");
+    const secLabel = getSectionForQ(key);
+    const existing = td.querySelector(".section-tag");
+    if(existing) existing.remove();
+    if(secLabel){
+      const tag = document.createElement("span");
+      tag.className="section-tag";
+      tag.textContent=secLabel;
+      td.appendChild(tag);
+    }
+  });
+}
+
+// ── SECTION EDITOR ───────────────────────────────────────────
+function buildSections(){
+  const wrap = document.getElementById("sections-wrap");
+  wrap.innerHTML = CFG.SECTIONS.map((sec,i)=>`
+    <div class="section-card" id="sec-card-${sec.id}">
+      <div class="section-card-head">
+        <span class="sec-label" contenteditable="true" onblur="onSecLabelChange(${i},this.textContent)">${esc(sec.label)}</span>
+        <div class="weight-wrap">
+          Weight: <input type="number" min="0" max="1" step="0.05" value="${sec.weight}"
+            style="width:60px" onchange="onWeightChange(${i},this.value)" oninput="debounceSave()"/>
+        </div>
+      </div>
+      <div class="section-card-body">
+        <div class="q-list" id="qlist-${sec.id}" data-section="${sec.id}">
+          ${(sec.questions||[]).map(q=>chipHTML(q,sec.id)).join("")}
+        </div>
+      </div>
+    </div>
+  `).join("");
+  buildPool();
+  setupDragDrop();
+  updateWeightTotal();
+}
+
+function buildPool(){
+  const allQ = Object.keys(DEFAULT_CONFIG.COLUMN_MAP).filter(k=>!META_KEYS.includes(k));
+  const assigned = CFG.SECTIONS.flatMap(s=>s.questions||[]);
+  const unassigned = allQ.filter(q=>!assigned.includes(q));
+  const pool = document.getElementById("q-pool");
+  pool.innerHTML = unassigned.map(q=>chipHTML(q,"__pool__")).join("");
+}
+
+function chipHTML(q, secId){
+  return `<div class="q-chip" draggable="true" data-q="${q}" data-sec="${secId}" id="chip-${q}">
+    ${q} <button class="rm" onclick="removeChip('${q}','${secId}')" title="Remove">×</button>
+  </div>`;
+}
+
+function removeChip(q, secId){
+  if(secId==="__pool__") return;
+  const sec = CFG.SECTIONS.find(s=>s.id===secId);
+  if(sec) sec.questions = sec.questions.filter(x=>x!==q);
+  buildSections();
+  updateSectionTags();
+  debounceSave();
+}
+
+function onSecLabelChange(i, val){
+  CFG.SECTIONS[i].label = val.trim();
+  debounceSave();
+}
+
+function onWeightChange(i, val){
+  CFG.SECTIONS[i].weight = parseFloat(val)||0;
+  updateWeightTotal();
+  debounceSave();
+}
+
+function updateWeightTotal(){
+  const total = CFG.SECTIONS.reduce((s,x)=>s+(parseFloat(x.weight)||0),0);
+  const el = document.getElementById("weight-total-val");
+  const warn = document.getElementById("weight-warning");
+  el.textContent = total.toFixed(2);
+  const ok = Math.abs(total-1.0)<0.001;
+  el.className = ok ? "ok" : "bad";
+  warn.style.display = ok ? "none" : "inline";
+}
+
+// ── DRAG & DROP ──────────────────────────────────────────────
+function setupDragDrop(){
+  document.querySelectorAll(".q-chip").forEach(chip=>{
+    chip.addEventListener("dragstart",e=>{
+      e.dataTransfer.setData("q", chip.dataset.q);
+      e.dataTransfer.setData("fromSec", chip.dataset.sec);
+    });
+  });
+  document.querySelectorAll(".q-list").forEach(list=>{
+    list.addEventListener("dragover",e=>{e.preventDefault();list.classList.add("drag-over");});
+    list.addEventListener("dragleave",()=>list.classList.remove("drag-over"));
+    list.addEventListener("drop",e=>{
+      e.preventDefault();
+      list.classList.remove("drag-over");
+      const q = e.dataTransfer.getData("q");
+      const fromSec = e.dataTransfer.getData("fromSec");
+      const toSec = list.dataset.section;
+      if(fromSec===toSec) return;
+      // remove from old section
+      if(fromSec!=="__pool__"){
+        const sec = CFG.SECTIONS.find(s=>s.id===fromSec);
+        if(sec) sec.questions = sec.questions.filter(x=>x!==q);
+      }
+      // add to new section
+      if(toSec!=="__pool__"){
+        const sec = CFG.SECTIONS.find(s=>s.id===toSec);
+        if(sec && !sec.questions.includes(q)) sec.questions.push(q);
+      }
+      buildSections();
+      updateSectionTags();
+      debounceSave();
+    });
+  });
+}
+
+// ── SCORING TABLE ────────────────────────────────────────────
+function buildScoringTable(){
+  const tbody = document.getElementById("scoring-body");
+  const scores = CFG.ANSWER_SCORES||{};
+  tbody.innerHTML = Object.entries(scores).map(([ans,sc])=>scoringRowHTML(ans,sc)).join("");
+}
+
+function scoringRowHTML(ans,sc){
+  const isNull = sc===null||sc===undefined||sc==="null";
+  return `<tr>
+    <td><input type="text" value="${esc(ans)}" onchange="onScoringChange(this)" oninput="debounceSave()" style="width:200px"/></td>
+    <td><input type="number" min="0" max="100" value="${isNull?"":sc}" ${isNull?"disabled":""} onchange="onScoringChange(this)" oninput="debounceSave()" style="width:70px"/></td>
+    <td class="na-cell" style="text-align:center"><input type="checkbox" ${isNull?"checked":""} onchange="toggleNA(this)"/></td>
+    <td><button class="btn-danger btn-sm" onclick="this.closest('tr').remove();rebuildScoring();debounceSave()">✕</button></td>
+  </tr>`;
+}
+
+function addScoringRow(){
+  const tbody = document.getElementById("scoring-body");
+  const tr = document.createElement("tr");
+  tr.innerHTML = scoringRowHTML("",0);
+  tbody.appendChild(tr);
+}
+
+function toggleNA(cb){
+  const numInput = cb.closest("tr").querySelector("td:nth-child(2) input");
+  numInput.disabled = cb.checked;
+  if(cb.checked) numInput.value="";
+  rebuildScoring();
+  debounceSave();
+}
+
+function onScoringChange(){rebuildScoring();debounceSave();}
+
+function rebuildScoring(){
+  const rows = document.querySelectorAll("#scoring-body tr");
+  const scores={};
+  rows.forEach(row=>{
+    const ans = row.querySelector("td:nth-child(1) input").value;
+    const naChk = row.querySelector("td:nth-child(3) input").checked;
+    const numVal = row.querySelector("td:nth-child(2) input").value;
+    if(ans!==undefined) scores[ans] = naChk ? null : (numVal===""?null:parseFloat(numVal));
+  });
+  CFG.ANSWER_SCORES = scores;
+}
+
+// ── SEVERITY ─────────────────────────────────────────────────
+function loadSeveritySliders(){
+  const t = CFG.SEVERITY_THRESHOLDS||DEFAULT_CONFIG.SEVERITY_THRESHOLDS;
+  document.getElementById("sl-critical").value = t.critical;
+  document.getElementById("sl-risk").value = t.at_risk;
+  document.getElementById("sl-good").value = t.good;
+}
+
+function updateSevBar(){
+  const c=+document.getElementById("sl-critical").value;
+  const r=+document.getElementById("sl-risk").value;
+  const g=+document.getElementById("sl-good").value;
+  document.getElementById("lbl-critical").textContent=c;
+  document.getElementById("lbl-risk").textContent=r;
+  document.getElementById("lbl-good").textContent=g;
+  document.getElementById("lbl-excellent").textContent=g+"+";
+  document.getElementById("zone-critical").style.width=c+"%";
+  document.getElementById("zone-risk").style.width=(r-c)+"%";
+  document.getElementById("zone-good").style.width=(g-r)+"%";
+  document.getElementById("zone-excellent").style.width=(100-g)+"%";
+  CFG.SEVERITY_THRESHOLDS={critical:c,at_risk:r,good:g,excellent:g};
+  debounceSave();
+}
+
+// ── SAVE ─────────────────────────────────────────────────────
+function saveAll(){
+  CFG.SHEET_URL = document.getElementById("sheet-url").value.trim();
+  // sync mapper
+  Object.keys(DEFAULT_CONFIG.COLUMN_MAP).forEach(key=>{
+    const sel=document.getElementById("map-"+key);
+    if(sel) CFG.COLUMN_MAP[key]=sel.value;
+  });
+  rebuildScoring();
+  localStorage.setItem("retail_dash_config", JSON.stringify(CFG));
+  const st=document.getElementById("save-status");
+  st.textContent="✅ Saved "+new Date().toLocaleTimeString();
+  showToast("Configuration saved!");
+  setTimeout(()=>st.textContent="",4000);
+}
+
+// ── EXPORT CONFIG.JS ─────────────────────────────────────────
+function exportConfigJS(){
+  saveAll();
+  const js = `// Retail Audit Dashboard — config.js
+// Generated by Admin Panel on ${new Date().toLocaleString()}
+
+window.CONFIG = ${JSON.stringify(CFG, null, 2)};
+`;
+  const blob = new Blob([js],{type:"application/javascript"});
+  const a = document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="config.js";
+  a.click();
+  showToast("config.js downloaded!");
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function esc(s){
+  if(s===null||s===undefined) return "";
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2500);
+}
+</script>
+</body>
+</html>
